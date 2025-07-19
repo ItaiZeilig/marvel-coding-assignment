@@ -193,20 +193,6 @@ Returns characters that have been played by different actors.
 }
 ```
 
-#### Clear Cache (Development)
-```http
-POST /clearCache
-```
-
-Clears the Redis cache.
-
-**Response:**
-```json
-{
-  "message": "Cache cleared successfully",
-  "deletedKeys": 42
-}
-```
 
 ## 📚 API Documentation
 
@@ -326,8 +312,6 @@ curl http://localhost:3000/actorsWithMultipleCharacters
 # Get characters with multiple actors
 curl http://localhost:3000/charactersWithMultipleActors
 
-# Clear cache
-curl -X POST http://localhost:3000/clearCache
 ```
 
 ### Using JavaScript/Fetch
@@ -338,12 +322,6 @@ const response = await fetch('http://localhost:3000/moviesPerActor');
 const moviesPerActor = await response.json();
 console.log(moviesPerActor);
 
-// Clear cache
-const clearResponse = await fetch('http://localhost:3000/clearCache', {
-  method: 'POST'
-});
-const result = await clearResponse.json();
-console.log(result);
 ```
 
 ## 🔐 Security Features

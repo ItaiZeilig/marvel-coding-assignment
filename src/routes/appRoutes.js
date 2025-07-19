@@ -47,20 +47,6 @@ router.get("/", (req, res) => {
   });
 });
 
-// Cache clearing endpoint for testing
-router.post("/clearCache", async (req, res) => {
-  try {
-    const redisCache = RedisCache.getInstance();
-    const deletedCount = await redisCache.invalidateNamespaces(["movies"]);
-    res.json({
-      message: "Cache cleared successfully",
-      deletedKeys: deletedCount,
-    });
-  } catch (error) {
-    logger.error("Error clearing cache:", error);
-    res.status(500).json({ error: "Failed to clear cache" });
-  }
-});
 
 /**
  * @swagger
