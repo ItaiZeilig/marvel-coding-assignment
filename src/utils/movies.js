@@ -2,12 +2,45 @@ import _ from "lodash";
 
 /**
  * Movie and actor utility functions
- * Contains reusable functions for processing movie and actor data
+ * Contains reusable functions for processing movie and actor data from TMDB API
  */
 
 /**
+ * Normalize actor name for comparison
+ * @param {string} name - Actor name to normalize
+ * @returns {string} Normalized name
+ */
+export const normalizeActorName = (name) => {
+  if (!name) return "";
+  
+  return _.chain(name)
+    .trim()
+    .toLower()
+    .deburr()
+    .replace(/[^\w\s]/g, "")
+    .value();
+};
+
+/**
+ * Normalize character name for comparison
+ * @param {string} name - Character name to normalize  
+ * @returns {string} Normalized name
+ */
+export const normalizeCharacterName = (name) => {
+  if (!name) return "";
+  
+  return _.chain(name)
+    .trim()
+    .toLower()
+    .deburr()
+    .replace(/[^\w\s\/]/g, "")
+    .replace(/_/g, "")
+    .value();
+};
+
+/**
  * Filter cast members to only include relevant actors
- * @param {Array} cast - Array of cast members
+ * @param {Array} cast - Array of cast members from TMDB
  * @param {Array} relevantActors - Array of actor names to filter by
  * @returns {Array} Filtered cast members
  */
@@ -16,51 +49,9 @@ export const filterRelevantActors = (cast, relevantActors) => {
     _.some(relevantActors, (actor) => {
       const normalizedActor = normalizeActorName(actor);
       const normalizedMember = normalizeActorName(member.name);
-      // Use exact match or very close match to avoid false positives
       return normalizedActor === normalizedMember;
     })
   );
-};
-
-/**
- * Normalize name for comparison
- * @param {string} name - Name to normalize
- * @param {boolean} preserveSlashes - Whether to preserve forward slashes
- * @returns {string} Normalized name
- */
-const normalizeName = (name, preserveSlashes = false) => {
-  if (!name) return "";
-
-  const pattern = preserveSlashes ? /[^\w\s\/]/g : /[^\w\s]/g;
-
-  return (
-    _.chain(name)
-      .trim()
-      .toLower()
-      // Normalize unicode characters to their base forms (e.g., ñ -> n, é -> e)
-      .deburr()
-      .replace(pattern, "")
-      .replace(/_/g, "")
-      .value()
-  );
-};
-
-/**
- * Normalize actor name for comparison
- * @param {string} name - Actor name to normalize
- * @returns {string} Normalized name
- */
-export const normalizeActorName = (name) => {
-  return normalizeName(name, false);
-};
-
-/**
- * Normalize character name for comparison
- * @param {string} name - Character name to normalize
- * @returns {string} Normalized name
- */
-export const normalizeCharacterName = (name) => {
-  return normalizeName(name, true);
 };
 
 /**
@@ -83,61 +74,61 @@ export const findActorMatch = (castMember, relevantActors) => {
 };
 
 /**
- * Trim character names by removing unnecessary information
- * @param {string} fullName - Full character name
- * @returns {string} Trimmed character name
+ * Parse character names that may contain multiple identities separated by " / "
+ * @param {string} characterString - Character string from TMDB (e.g., "Steve Rogers / Captain America")
+ * @returns {Array} Array of individual character names
  */
-export const trimCharacterName = (fullName) => {
-  if (!fullName) return "";
-
-  let result = _.chain(fullName).split("/").head().value();
-
-  // Remove nested parentheses and brackets iteratively
-  let iterations = 0;
-  const maxIterations = 10; // Prevent infinite loops
-
-  while (
-    (result.includes("(") || result.includes("[")) &&
-    iterations < maxIterations
-  ) {
-    const before = result;
-    // Handle nested parentheses by removing innermost first
-    result = result
-      .replace(/\([^()]*\)/g, "") // Remove innermost parentheses
-      .replace(/\[[^\[\]]*\]/g, ""); // Remove innermost brackets
-
-    // If no change occurred, break to avoid infinite loop
-    if (result === before) break;
-    iterations++;
-  }
-
-  return _.chain(result).replace(/\s+/g, " ").trim().value();
+export const parseCharacterNames = (characterString) => {
+  if (!characterString) return [];
+  
+  return _.chain(characterString)
+    .split('/')
+    .map(name => _.trim(name))
+    .filter(name => !_.isEmpty(name))
+    .value();
 };
 
 /**
- * Check if there are multiple unique characters
- * @param {Array} characters - Array of character names
- * @returns {boolean} True if multiple unique characters exist
+ * Extract the primary character name from a character string
+ * For simplicity, we take the first name from the split
+ * @param {string} characterString - Character string from TMDB
+ * @returns {string} Primary character name
  */
-export const isMoreThanOneCharacter = (characters) => {
-  if (_.isEmpty(characters) || characters.length < 2) {
+export const extractPrimaryCharacterName = (characterString) => {
+  const names = parseCharacterNames(characterString);
+  return names.length > 0 ? names[0] : '';
+};
+
+/**
+ * Check if an actor has multiple distinct characters
+ * Simple comparison based on primary character names (first part before " / ")
+ * @param {Array} characterStrings - Array of character strings for an actor
+ * @returns {boolean} True if actor has multiple distinct characters
+ */
+export const hasMultipleDistinctCharacters = (characterStrings) => {
+  if (_.isEmpty(characterStrings) || characterStrings.length < 2) {
     return false;
   }
 
-  const cleanedCharacters = _.chain(characters)
-    .map((char) => trimCharacterName(char))
-    .filter((char) => !_.isEmpty(char))
+  // Extract primary character names (first part before " / ") and normalize them
+  const primaryNames = _.chain(characterStrings)
+    .map(extractPrimaryCharacterName)
+    .map(normalizeCharacterName)
+    .filter(name => !_.isEmpty(name))
     .uniq()
     .value();
 
-  if (cleanedCharacters.length < 2) {
-    return false;
-  }
+  // If we have more than one unique primary character name, they're distinct characters
+  return primaryNames.length > 1;
+};
 
-  // Extract core character identities by removing titles and variations
-  const coreCharacters = _.map(cleanedCharacters, extractCoreCharacterName);
-  const uniqueCoreCharacters = _.uniq(coreCharacters);
-
-  // If we have multiple unique core characters, it's truly multiple characters
-  return uniqueCoreCharacters.length > 1;
+/**
+ * Create a mapping of character names to their normalized forms
+ * This helps identify the same character across different movies
+ * @param {string} characterString - Character string from TMDB
+ * @returns {string} Normalized character for grouping
+ */
+export const normalizeCharacterForGrouping = (characterString) => {
+  const primaryName = extractPrimaryCharacterName(characterString);
+  return normalizeCharacterName(primaryName);
 };

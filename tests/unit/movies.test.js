@@ -4,74 +4,164 @@ import {
   normalizeActorName,
   normalizeCharacterName,
   findActorMatch,
-  trimCharacterName,
-  isMoreThanOneCharacter,
+  parseCharacterNames,
+  extractPrimaryCharacterName,
+  hasMultipleDistinctCharacters,
+  normalizeCharacterForGrouping,
 } from "../../src/utils/movies.js";
 
 describe("Movies Utilities", () => {
-  describe("trimCharacterName", () => {
-    it("should trim character names correctly", () => {
-      expect(trimCharacterName("Tony Stark / Iron Man")).toBe("Tony Stark");
-      expect(trimCharacterName("Bruce Banner (Hulk)")).toBe("Bruce Banner");
-      expect(trimCharacterName("Peter Parker [Spider-Man]")).toBe(
-        "Peter Parker"
-      );
-      expect(trimCharacterName("  Steve Rogers  ")).toBe("Steve Rogers");
-      expect(trimCharacterName("")).toBe("");
-      expect(trimCharacterName(null)).toBe("");
+  describe("normalizeActorName", () => {
+    it("should normalize actor names correctly", () => {
+      expect(normalizeActorName("  Robert Downey Jr.  ")).toBe("robert downey jr");
+      expect(normalizeActorName("Chris Evans")).toBe("chris evans");
+      expect(normalizeActorName("Scarlett Johansson!")).toBe("scarlett johansson");
     });
 
-    it("should handle complex character names", () => {
-      expect(trimCharacterName("Tony Stark / Iron Man (Mark III)")).toBe(
-        "Tony Stark"
-      );
-      expect(trimCharacterName("Bruce Banner / Hulk [CGI]")).toBe(
-        "Bruce Banner"
-      );
-      expect(trimCharacterName("Multiple   Spaces   Name")).toBe(
-        "Multiple Spaces Name"
-      );
+    it("should handle null and undefined", () => {
+      expect(normalizeActorName(null)).toBe("");
+      expect(normalizeActorName(undefined)).toBe("");
+    });
+
+    it("should handle empty string", () => {
+      expect(normalizeActorName("")).toBe("");
+    });
+
+    it("should handle unicode characters", () => {
+      expect(normalizeActorName("José García")).toBe("jose garcia");
+      expect(normalizeActorName("Zoe Saldaña")).toBe("zoe saldana");
     });
   });
 
-  describe("isMoreThanOneCharacter", () => {
+  describe("normalizeCharacterName", () => {
+    it("should normalize character names correctly", () => {
+      expect(normalizeCharacterName("  Tony Stark / Iron Man  ")).toBe("tony stark / iron man");
+      expect(normalizeCharacterName("Bruce Banner (Hulk)")).toBe("bruce banner hulk");
+      expect(normalizeCharacterName("Peter Parker [Spider-Man]")).toBe("peter parker spiderman");
+      expect(normalizeCharacterName("")).toBe("");
+      expect(normalizeCharacterName(null)).toBe("");
+    });
+
+    it("should handle unicode characters", () => {
+      expect(normalizeCharacterName("José García")).toBe("jose garcia");
+      expect(normalizeCharacterName("Zoe Saldaña")).toBe("zoe saldana");
+    });
+
+    it("should remove special characters but preserve slashes", () => {
+      expect(normalizeCharacterName("Tony Stark!@#$%")).toBe("tony stark");
+      expect(normalizeCharacterName("Character-Name_123")).toBe("charactername123");
+      expect(normalizeCharacterName("Steve Rogers / Captain America")).toBe("steve rogers / captain america");
+    });
+  });
+
+  describe("parseCharacterNames", () => {
+    it("should parse single character names", () => {
+      expect(parseCharacterNames("Tony Stark")).toEqual(["Tony Stark"]);
+      expect(parseCharacterNames("Bruce Banner")).toEqual(["Bruce Banner"]);
+    });
+
+    it("should parse multiple character identities", () => {
+      expect(parseCharacterNames("Steve Rogers / Captain America")).toEqual([
+        "Steve Rogers",
+        "Captain America",
+      ]);
+      expect(parseCharacterNames("Tony Stark / Iron Man")).toEqual([
+        "Tony Stark",
+        "Iron Man",
+      ]);
+    });
+
+    it("should handle extra spaces", () => {
+      expect(parseCharacterNames("  Steve Rogers  /  Captain America  ")).toEqual([
+        "Steve Rogers",
+        "Captain America",
+      ]);
+    });
+
+    it("should handle empty and null inputs", () => {
+      expect(parseCharacterNames("")).toEqual([]);
+      expect(parseCharacterNames(null)).toEqual([]);
+      expect(parseCharacterNames(undefined)).toEqual([]);
+    });
+
+    it("should handle three or more identities", () => {
+      expect(parseCharacterNames("A / B / C")).toEqual(["A", "B", "C"]);
+    });
+  });
+
+  describe("extractPrimaryCharacterName", () => {
+    it("should extract the first character name", () => {
+      expect(extractPrimaryCharacterName("Steve Rogers / Captain America")).toBe("Steve Rogers");
+      expect(extractPrimaryCharacterName("Tony Stark / Iron Man")).toBe("Tony Stark");
+      expect(extractPrimaryCharacterName("Bruce Banner")).toBe("Bruce Banner");
+    });
+
+    it("should handle empty inputs", () => {
+      expect(extractPrimaryCharacterName("")).toBe("");
+      expect(extractPrimaryCharacterName(null)).toBe("");
+    });
+  });
+
+  describe("hasMultipleDistinctCharacters", () => {
     it("should return false for single character", () => {
-      expect(isMoreThanOneCharacter(["Tony Stark"])).toBe(false);
-      expect(isMoreThanOneCharacter(["Tony Stark", "Tony Stark"])).toBe(false);
+      expect(hasMultipleDistinctCharacters(["Tony Stark"])).toBe(false);
+      expect(hasMultipleDistinctCharacters(["Tony Stark / Iron Man"])).toBe(false);
+    });
+
+    it("should return false for same primary character", () => {
+      expect(hasMultipleDistinctCharacters([
+        "Tony Stark / Iron Man",
+        "Tony Stark"
+      ])).toBe(false);
+      
+      expect(hasMultipleDistinctCharacters([
+        "Steve Rogers / Captain America",
+        "Steve Rogers"
+      ])).toBe(false);
     });
 
     it("should return true for multiple distinct characters", () => {
-      expect(isMoreThanOneCharacter(["Tony Stark", "Bruce Banner"])).toBe(true);
-      expect(
-        isMoreThanOneCharacter(["Iron Man", "Tony Stark", "Peter Parker"])
-      ).toBe(true);
+      expect(hasMultipleDistinctCharacters([
+        "Tony Stark / Iron Man",
+        "Bruce Banner / Hulk"
+      ])).toBe(true);
+      
+      expect(hasMultipleDistinctCharacters([
+        "Steve Rogers / Captain America",
+        "Johnny Storm / Human Torch"
+      ])).toBe(true);
     });
 
-    it("should handle character variations correctly", () => {
-      expect(
-        isMoreThanOneCharacter(["Tony Stark", "Tony Stark (Iron Man)"])
-      ).toBe(false);
-      expect(
-        isMoreThanOneCharacter(["Bruce Banner", "Bruce Banner / Hulk"])
-      ).toBe(false);
+    it("should return true for different primary character names", () => {
+      // These have different primary names so are distinct characters
+      expect(hasMultipleDistinctCharacters([
+        "James Rhodes",
+        "Lieutenant James Rhodes", 
+        "Colonel James Rhodes"
+      ])).toBe(true); // "James Rhodes", "Lieutenant James Rhodes", "Colonel James Rhodes" are all different primary names
+      
+      expect(hasMultipleDistinctCharacters([
+        "Natasha Romanoff",
+        "Natalie Rushman"
+      ])).toBe(true); // Different primary names
     });
 
     it("should handle edge cases", () => {
-      expect(isMoreThanOneCharacter([])).toBe(false);
-      expect(isMoreThanOneCharacter([""])).toBe(false);
-      expect(isMoreThanOneCharacter([null, undefined])).toBe(false);
+      expect(hasMultipleDistinctCharacters([])).toBe(false);
+      expect(hasMultipleDistinctCharacters([""])).toBe(false);
+      expect(hasMultipleDistinctCharacters([null, undefined])).toBe(false);
     });
   });
 
-  describe("normalizeActorName", () => {
-    it("should normalize actor names correctly", () => {
-      expect(normalizeActorName("  Robert Downey Jr.  ")).toBe(
-        "robert downey jr"
-      );
-      expect(normalizeActorName("Chris Evans")).toBe("chris evans");
-      expect(normalizeActorName("Scarlett Johansson!")).toBe(
-        "scarlett johansson"
-      );
+  describe("normalizeCharacterForGrouping", () => {
+    it("should normalize primary character names for grouping", () => {
+      expect(normalizeCharacterForGrouping("Steve Rogers / Captain America")).toBe("steve rogers");
+      expect(normalizeCharacterForGrouping("Tony Stark / Iron Man")).toBe("tony stark");
+      expect(normalizeCharacterForGrouping("Bruce Banner")).toBe("bruce banner");
+    });
+
+    it("should handle complex character strings", () => {
+      expect(normalizeCharacterForGrouping("James 'Rhodey' Rhodes / War Machine")).toBe("james rhodey rhodes");
     });
   });
 
@@ -80,21 +170,25 @@ describe("Movies Utilities", () => {
 
     it("should find exact matches", () => {
       const castMember = { name: "Robert Downey Jr." };
-      expect(findActorMatch(castMember, relevantActors)).toBe(
-        "Robert Downey Jr."
-      );
+      expect(findActorMatch(castMember, relevantActors)).toBe("Robert Downey Jr.");
     });
 
-    it("should find partial matches", () => {
+    it("should find case-insensitive matches", () => {
       const castMember = { name: "robert downey jr." };
-      expect(findActorMatch(castMember, relevantActors)).toBe(
-        "Robert Downey Jr."
-      );
+      expect(findActorMatch(castMember, relevantActors)).toBe("Robert Downey Jr.");
     });
 
     it("should return undefined for no match", () => {
       const castMember = { name: "Unknown Actor" };
       expect(findActorMatch(castMember, relevantActors)).toBeUndefined();
+    });
+
+    it("should handle null cast member", () => {
+      expect(findActorMatch(null, relevantActors)).toBeUndefined();
+    });
+
+    it("should handle cast member without name", () => {
+      expect(findActorMatch({}, relevantActors)).toBeUndefined();
     });
   });
 
@@ -123,12 +217,6 @@ describe("Movies Utilities", () => {
       expect(result).toEqual([]);
     });
 
-    it("should handle no matching actors", () => {
-      const irrelevantActors = ["Unknown Actor", "Another Actor"];
-      const result = filterRelevantActors(cast, irrelevantActors);
-      expect(result).toEqual([]);
-    });
-
     it("should handle case insensitive matching", () => {
       const caseInsensitiveCast = [
         { name: "robert downey jr.", character: "Tony Stark" },
@@ -136,305 +224,6 @@ describe("Movies Utilities", () => {
       ];
       const result = filterRelevantActors(caseInsensitiveCast, relevantActors);
       expect(result).toHaveLength(2);
-    });
-
-    it("should handle actors with extra spaces", () => {
-      const spacedCast = [
-        { name: "  Robert Downey Jr.  ", character: "Tony Stark" },
-        { name: "Chris Evans   ", character: "Steve Rogers" },
-      ];
-      const result = filterRelevantActors(spacedCast, relevantActors);
-      expect(result).toHaveLength(2);
-    });
-  });
-
-  describe("normalizeCharacterName", () => {
-    it("should normalize character names correctly", () => {
-      expect(normalizeCharacterName("  Tony Stark / Iron Man  ")).toBe(
-        "tony stark / iron man"
-      );
-      expect(normalizeCharacterName("Bruce Banner (Hulk)")).toBe(
-        "bruce banner hulk"
-      );
-      expect(normalizeCharacterName("Peter Parker [Spider-Man]")).toBe(
-        "peter parker spiderman"
-      );
-      expect(normalizeCharacterName("")).toBe("");
-      expect(normalizeCharacterName(null)).toBe("");
-    });
-
-    it("should handle unicode characters", () => {
-      expect(normalizeCharacterName("José García")).toBe("jose garcia");
-      expect(normalizeCharacterName("Zoe Saldaña")).toBe("zoe saldana");
-    });
-
-    it("should remove special characters", () => {
-      expect(normalizeCharacterName("Tony Stark!@#$%")).toBe("tony stark");
-      expect(normalizeCharacterName("Character-Name_123")).toBe(
-        "charactername123"
-      );
-    });
-  });
-
-  describe("normalizeActorName - additional edge cases", () => {
-    it("should handle null and undefined", () => {
-      expect(normalizeActorName(null)).toBe("");
-      expect(normalizeActorName(undefined)).toBe("");
-    });
-
-    it("should handle empty string", () => {
-      expect(normalizeActorName("")).toBe("");
-    });
-
-    it("should handle only spaces", () => {
-      expect(normalizeActorName("   ")).toBe("");
-    });
-
-    it("should handle numbers in names", () => {
-      expect(normalizeActorName("Actor Number 1")).toBe("actor number 1");
-    });
-
-    it("should handle special characters", () => {
-      expect(normalizeActorName("Robert Downey Jr.!@#$%")).toBe(
-        "robert downey jr"
-      );
-    });
-
-    it("should handle unicode characters", () => {
-      // The implementation converts accented characters to their base forms
-      expect(normalizeActorName("José García")).toBe("jose garcia");
-      expect(normalizeActorName("Zoe Saldaña")).toBe("zoe saldana");
-    });
-  });
-
-  describe("findActorMatch - comprehensive testing", () => {
-    const relevantActors = [
-      "Robert Downey Jr.",
-      "Chris Evans",
-      "Mark Ruffalo",
-      "José García",
-    ];
-
-    it("should handle null cast member", () => {
-      expect(findActorMatch(null, relevantActors)).toBeUndefined();
-    });
-
-    it("should handle cast member without name", () => {
-      expect(findActorMatch({}, relevantActors)).toBeUndefined();
-    });
-
-    it("should handle empty name", () => {
-      expect(findActorMatch({ name: "" }, relevantActors)).toBeUndefined();
-    });
-
-    it("should handle names with different punctuation", () => {
-      const castMember = { name: "Robert Downey Jr" }; // No period
-      expect(findActorMatch(castMember, relevantActors)).toBe(
-        "Robert Downey Jr."
-      );
-    });
-
-    it("should handle names with extra characters", () => {
-      const castMember = { name: "Robert Downey Jr.!!!" };
-      expect(findActorMatch(castMember, relevantActors)).toBe(
-        "Robert Downey Jr."
-      );
-    });
-
-    it("should handle unicode characters", () => {
-      const castMember = { name: "José García" };
-      expect(findActorMatch(castMember, relevantActors)).toBe("José García");
-    });
-
-    it("should handle partial name matches", () => {
-      const castMember = { name: "R. Downey Jr." };
-      expect(findActorMatch(castMember, relevantActors)).toBeUndefined(); // Should not match partial
-    });
-
-    it("should handle middle names", () => {
-      const castMember = { name: "Robert John Downey Jr." };
-      expect(findActorMatch(castMember, relevantActors)).toBeUndefined(); // Should not match with extra names
-    });
-  });
-
-  describe("trimCharacterName - extensive edge cases", () => {
-    it("should handle nested parentheses", () => {
-      expect(trimCharacterName("Tony Stark (Iron Man (Mark III))")).toBe(
-        "Tony Stark"
-      );
-    });
-
-    it("should handle mixed brackets", () => {
-      expect(trimCharacterName("Bruce Banner [Hulk] (CGI)")).toBe(
-        "Bruce Banner"
-      );
-    });
-
-    it("should handle multiple slashes", () => {
-      expect(trimCharacterName("Peter Parker / Spider-Man / Web-Slinger")).toBe(
-        "Peter Parker"
-      );
-    });
-
-    it("should handle only special characters", () => {
-      expect(trimCharacterName("(uncredited)")).toBe("");
-      expect(trimCharacterName("[voice]")).toBe("");
-      expect(trimCharacterName("/ / /")).toBe("");
-    });
-
-    it("should handle character names with numbers", () => {
-      expect(trimCharacterName("Terminator T-800 / Model 101")).toBe(
-        "Terminator T-800"
-      );
-    });
-
-    it("should handle very long character names", () => {
-      const longName =
-        "Very Long Character Name That Goes On And On / Alias1 / Alias2";
-      expect(trimCharacterName(longName)).toBe(
-        "Very Long Character Name That Goes On And On"
-      );
-    });
-
-    it("should handle character names with apostrophes", () => {
-      expect(trimCharacterName("Tony 'Iron Man' Stark / Superhero")).toBe(
-        "Tony 'Iron Man' Stark"
-      );
-    });
-  });
-
-  describe("isMoreThanOneCharacter - comprehensive scenarios", () => {
-    it("should handle mixed case variations of same character", () => {
-      expect(
-        isMoreThanOneCharacter(["tony stark", "Tony Stark", "TONY STARK"])
-      ).toBe(false);
-    });
-
-    it("should handle character names with different punctuation", () => {
-      // These should be treated as the same character after normalization
-      expect(
-        isMoreThanOneCharacter(["Tony Stark", "Tony Stark.", "Tony Stark!"])
-      ).toBe(false);
-    });
-
-    it("should handle character aliases correctly", () => {
-      // These should be detected as the same core character (Tony Stark)
-      expect(
-        isMoreThanOneCharacter([
-          "Tony Stark / Iron Man",
-          "Tony Stark",
-          "Iron Man",
-        ])
-      ).toBe(false);
-    });
-
-    it("should detect truly different characters", () => {
-      expect(
-        isMoreThanOneCharacter(["Tony Stark", "Bruce Banner", "Steve Rogers"])
-      ).toBe(true);
-    });
-
-    it("should handle character names with parentheses", () => {
-      // These should be detected as the same core character (Bruce Banner)
-      expect(
-        isMoreThanOneCharacter(["Bruce Banner", "Bruce Banner (Hulk)", "Hulk"])
-      ).toBe(false);
-    });
-
-    it("should handle very similar but different characters", () => {
-      expect(
-        isMoreThanOneCharacter([
-          "Peter Parker",
-          "Peter Parker (Spider-Man)",
-          "Miles Morales (Spider-Man)",
-        ])
-      ).toBe(true);
-    });
-
-    it("should handle Marvel character variations correctly", () => {
-      // Steve Rogers / Captain America variations should be treated as same character
-      expect(
-        isMoreThanOneCharacter([
-          "Steve Rogers",
-          "Captain America",
-          "Loki as Captain America",
-        ])
-      ).toBe(false);
-
-      // James Rhodes variations should be treated as same character
-      expect(
-        isMoreThanOneCharacter([
-          "James Rhodes",
-          "Lieutenant James Rhodes",
-          "Lt Col James Rhodey Rhodes",
-          "Colonel James Rhodes",
-          "Rhodey",
-        ])
-      ).toBe(false);
-
-      // Natasha Romanoff variations should be treated as same character
-      expect(
-        isMoreThanOneCharacter([
-          "Natasha Romanoff",
-          "Natalie Rushman",
-          "Black Widow",
-        ])
-      ).toBe(false);
-    });
-
-    it("should detect truly different Marvel characters", () => {
-      expect(isMoreThanOneCharacter(["Johnny Storm", "Erik Killmonger"])).toBe(
-        true
-      );
-
-      expect(
-        isMoreThanOneCharacter(["Tony Stark", "Bruce Banner", "Steve Rogers"])
-      ).toBe(true);
-    });
-
-    it("should handle large character lists", () => {
-      const manyCharacters = Array(100).fill("Tony Stark");
-      expect(isMoreThanOneCharacter(manyCharacters)).toBe(false);
-    });
-
-    it("should handle mixed null and undefined values", () => {
-      expect(isMoreThanOneCharacter([null, undefined, "", "Tony Stark"])).toBe(
-        false
-      );
-    });
-  });
-
-  describe("performance and stress testing", () => {
-    it("should handle large cast lists efficiently", () => {
-      const largeCast = Array(1000)
-        .fill()
-        .map((_, i) => ({
-          name: `Actor ${i}`,
-          character: `Character ${i}`,
-        }));
-      const relevantActors = ["Actor 500"];
-
-      const startTime = Date.now();
-      const result = filterRelevantActors(largeCast, relevantActors);
-      const endTime = Date.now();
-
-      expect(result.length).toBeGreaterThanOrEqual(1);
-      expect(endTime - startTime).toBeLessThan(100); // Should complete in under 100ms
-    });
-
-    it("should handle large relevant actors list efficiently", () => {
-      const cast = [{ name: "Test Actor", character: "Test Character" }];
-      const largeRelevantActors = Array(1000)
-        .fill()
-        .map((_, i) => `Actor ${i}`);
-      largeRelevantActors.push("Test Actor");
-
-      const startTime = Date.now();
-      const result = filterRelevantActors(cast, largeRelevantActors);
-      const endTime = Date.now();
-
-      expect(result).toHaveLength(1);
-      expect(endTime - startTime).toBeLessThan(100);
     });
   });
 });

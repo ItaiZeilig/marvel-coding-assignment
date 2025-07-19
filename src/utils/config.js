@@ -62,28 +62,6 @@ function validateRequiredConfig() {
   }
 }
 
-/**
- * Generate configuration summary with masked secrets using Lodash
- */
-function generateConfigSummaryWithMaskedSecrets() {
-  return _.chain(config)
-    .mapValues((section, sectionName) => {
-      if (_.isObject(section)) {
-        return _.mapValues(section, (value, key) => {
-          // Mask sensitive values
-          if (_.includes(["apiKey", "password", "secret"], key)) {
-            return "***HIDDEN***";
-          }
-          return value;
-        });
-      }
-      return section;
-    })
-    .value();
-}
-
-// Add the summary function to config
-config.getSummary = generateConfigSummaryWithMaskedSecrets;
 
 // Validate configuration on module load
 validateRequiredConfig();

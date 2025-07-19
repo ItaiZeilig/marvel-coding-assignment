@@ -5,8 +5,8 @@ import { RedisCache } from "../infrastructure/redis.js";
 import {
   filterRelevantActors,
   findActorMatch,
-  trimCharacterName,
-  isMoreThanOneCharacter,
+  hasMultipleDistinctCharacters,
+  normalizeCharacterForGrouping,
 } from "../utils/movies.js";
 import { CACHE_NAMESPACES, CACHE_KEYS } from "../utils/constants.js";
 import { actors } from "../../dataForQuestions.js";
@@ -143,7 +143,7 @@ export class MoviesService {
         .mapValues((characters) => _.uniqBy(characters, "characterName"))
         .pickBy((characters) => {
           const characterNames = _.map(characters, "characterName");
-          return isMoreThanOneCharacter(characterNames);
+          return hasMultipleDistinctCharacters(characterNames);
         })
         .mapValues((characters) =>
           _.sortBy(characters, "movieName").map((char) => ({
@@ -200,7 +200,7 @@ export class MoviesService {
       const moviesData = await this.tmdbService.getAllMoviesData();
 
       const characterActors = {};
-      const trimmedToOriginal = {};
+      const normalizedToOriginal = {};
 
       _.forEach(moviesData, (movieData, movieTitle) => {
         const relevantCast = filterRelevantActors(
@@ -211,14 +211,14 @@ export class MoviesService {
         _.forEach(relevantCast, (castMember) => {
           const matchedActor = findActorMatch(castMember, actors);
           if (matchedActor && castMember.character) {
-            const trimmedCharacter = trimCharacterName(castMember.character);
+            const normalizedCharacter = normalizeCharacterForGrouping(castMember.character);
 
-            if (!characterActors[trimmedCharacter]) {
-              characterActors[trimmedCharacter] = [];
-              trimmedToOriginal[trimmedCharacter] = castMember.character;
+            if (!characterActors[normalizedCharacter]) {
+              characterActors[normalizedCharacter] = [];
+              normalizedToOriginal[normalizedCharacter] = castMember.character;
             }
 
-            characterActors[trimmedCharacter].push({
+            characterActors[normalizedCharacter].push({
               movieName: movieTitle,
               actorName: matchedActor,
             });
@@ -230,7 +230,7 @@ export class MoviesService {
         .mapValues((actors) => _.uniqBy(actors, "actorName"))
         .pickBy((actors) => actors.length > 1)
         .mapValues((actors) => _.sortBy(actors, "movieName"))
-        .mapKeys((_, trimmedCharacter) => trimmedToOriginal[trimmedCharacter])
+        .mapKeys((_, normalizedCharacter) => normalizedToOriginal[normalizedCharacter])
         .value();
 
       const finalResult = _.chain(result)

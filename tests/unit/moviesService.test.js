@@ -3,14 +3,14 @@ import { jest } from "@jest/globals";
 // Mock utility functions
 const mockFilterRelevantActors = jest.fn();
 const mockFindActorMatch = jest.fn();
-const mockIsMoreThanOneCharacter = jest.fn();
-const mockTrimCharacterName = jest.fn();
+const mockHasMultipleDistinctCharacters = jest.fn();
+const mockNormalizeCharacterForGrouping = jest.fn();
 
 jest.unstable_mockModule("../../src/utils/movies.js", () => ({
   filterRelevantActors: mockFilterRelevantActors,
   findActorMatch: mockFindActorMatch,
-  isMoreThanOneCharacter: mockIsMoreThanOneCharacter,
-  trimCharacterName: mockTrimCharacterName,
+  hasMultipleDistinctCharacters: mockHasMultipleDistinctCharacters,
+  normalizeCharacterForGrouping: mockNormalizeCharacterForGrouping,
 }));
 
 // Mock TMDB Service
@@ -71,8 +71,8 @@ describe("MoviesService", () => {
       { name: "Robert Downey Jr.", character: "Tony Stark / Iron Man" },
     ]);
     mockFindActorMatch.mockReturnValue("Robert Downey Jr.");
-    mockIsMoreThanOneCharacter.mockReturnValue(true);
-    mockTrimCharacterName.mockImplementation((char) => char);
+    mockHasMultipleDistinctCharacters.mockReturnValue(true);
+    mockNormalizeCharacterForGrouping.mockImplementation((char) => char.toLowerCase());
   });
 
   describe("singleton pattern", () => {
@@ -320,8 +320,8 @@ describe("MoviesService", () => {
         { name: "Robert Downey Jr.", character: "Tony Stark" },
       ]);
       mockFindActorMatch.mockReturnValue("Robert Downey Jr.");
-      mockIsMoreThanOneCharacter.mockReturnValue(true);
-      mockTrimCharacterName.mockImplementation((char) => char.split(" / ")[0]);
+      mockHasMultipleDistinctCharacters.mockReturnValue(true);
+      mockNormalizeCharacterForGrouping.mockImplementation((char) => char.split(" / ")[0].toLowerCase());
 
       const result = await moviesService.getActorsWithMultipleCharacters();
 
@@ -330,13 +330,13 @@ describe("MoviesService", () => {
         "actorsWithMultipleCharacters",
         expect.any(Object)
       );
-      expect(mockIsMoreThanOneCharacter).toHaveBeenCalled();
+      expect(mockHasMultipleDistinctCharacters).toHaveBeenCalled();
     });
 
     it("should handle empty results", async () => {
       mockCache.getNamespaced.mockResolvedValue(null);
       mockGetAllMoviesData.mockResolvedValue({});
-      mockIsMoreThanOneCharacter.mockReturnValue(false);
+      mockHasMultipleDistinctCharacters.mockReturnValue(false);
 
       const result = await moviesService.getActorsWithMultipleCharacters();
 
@@ -401,7 +401,7 @@ describe("MoviesService", () => {
       mockFindActorMatch
         .mockReturnValueOnce("Tobey Maguire")
         .mockReturnValueOnce("Andrew Garfield");
-      mockTrimCharacterName.mockReturnValue("Spider-Man");
+      mockNormalizeCharacterForGrouping.mockReturnValue("spiderman");
 
       const result = await moviesService.getCharactersWithMultipleActors();
 
@@ -426,7 +426,7 @@ describe("MoviesService", () => {
         { name: "Robert Downey Jr.", character: "Tony Stark" },
       ]);
       mockFindActorMatch.mockReturnValue("Robert Downey Jr.");
-      mockTrimCharacterName.mockReturnValue("Tony Stark");
+      mockNormalizeCharacterForGrouping.mockReturnValue("tony stark");
 
       const result = await moviesService.getCharactersWithMultipleActors();
 
@@ -470,7 +470,7 @@ describe("MoviesService", () => {
       mockFindActorMatch
         .mockReturnValueOnce("Tobey Maguire")
         .mockReturnValueOnce("Andrew Garfield");
-      mockTrimCharacterName.mockReturnValue("Spider-Man");
+      mockNormalizeCharacterForGrouping.mockReturnValue("spiderman");
 
       const result = await moviesService.getCharactersWithMultipleActors();
 
