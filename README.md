@@ -1,174 +1,221 @@
-# Marvel Movies API
+# Movies API
 
-A REST API server that provides information about Marvel movies and actors using The Movie Database (TMDB) API. This service answers questions about Marvel movies, actors, and their relationships.
+A Node.js REST API that provides movie and actor information using The Movie Database (TMDB) API. The API analyzes relationships between actors, characters, and movies with Redis caching for optimal performance.
 
-## Features
+## 🎬 What This API Does
 
-- **Movies per Actor**: Find which Marvel movies each actor has appeared in
-- **Actors with Multiple Characters**: Identify actors who have played more than one Marvel character
-- **Characters with Multiple Actors**: Find roles that have been played by different actors
-- **Redis Caching**: Improved performance with Redis caching
-- **Swagger Documentation**: Interactive API documentation
-- **Comprehensive Logging**: Structured logging with Winston
-- **Unit & Integration Tests**: Test coverage for reliability
+This Movies API provides three main analytical endpoints:
 
-## Prerequisites
+1. **Movies Per Actor** - Shows all movies each actor has appeared in
+2. **Actors with Multiple Characters** - Finds actors who have played more than one character
+3. **Characters with Multiple Actors** - Identifies characters that have been portrayed by different actors
 
-- Node.js (v18 or higher)
-- Redis server (for caching)
+The API uses TMDB (The Movie Database) as its data source and implements Redis caching for fast response times.
+
+## 🛠 Tech Stack
+
+- **Node.js** (ES Modules)
+- **Express.js** - Web framework
+- **Redis** - Caching layer
+- **Axios** - HTTP client for TMDB API
+- **Lodash** - Utility functions
+- **Winston** - Logging
+- **Swagger/OpenAPI** - API documentation
+- **Jest** - Testing framework
+- **SuperTest** - HTTP testing
+
+## 📋 Prerequisites
+
+- Node.js (v16 or higher)
+- Redis server
 - TMDB API key
 
-## Installation
+## 🚀 Quick Start
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd backend_assignment_skeleton
-   ```
+### 1. Clone and Install
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-   
-   The `.env` file is already configured with the required TMDB API key. You can modify it if needed:
-   
-   ```bash
-   # Server Configuration
-   PORT=3000
-   NODE_ENV=development
-   
-   # TMDB API Configuration
-   TMDB_API_KEY=ac505a02032a33d65dd28b41f72182e1
-   TMDB_BASE_URL=https://api.themoviedb.org/3
-   
-   # Redis Configuration (update with your Redis instance)
-   REDIS_URL=redis://localhost:6379
-   
-   # Cache Configuration
-   CACHE_TTL_SECONDS=3600
-   CACHE_ENABLED=true
-   
-   # Logging Configuration
-   LOG_LEVEL=debug
-   ```
-
-4. **Start Redis server**
-   ```bash
-   # Using Docker
-   docker run -d -p 6379:6379 redis:alpine
-   
-   # Or using local Redis installation
-   redis-server
-   ```
-
-## Running the Server
-
-### Development Mode
 ```bash
-npm run dev
+git clone <repository-url>
+cd backend_assignment_skeleton
+npm install
 ```
 
-### Production Mode
+### 2. Environment Setup
+
+Create a `.env` file in the root directory:
+
 ```bash
+cp .env.example .env
+```
+
+Edit `.env` with your configuration:
+
+```env
+# Required
+TMDB_API_KEY=your_tmdb_api_key_here
+REDIS_URL=redis://localhost:6379
+
+# Optional (with defaults)
+PORT=3000
+NODE_ENV=development
+CACHE_TTL_SECONDS=3600
+LOG_LEVEL=info
+ENABLE_FILE_LOGGING=false
+TMDB_BASE_URL=https://api.themoviedb.org/3
+TMDB_TIMEOUT_MS=500
+```
+
+### 3. Start Redis
+
+```bash
+# Using Docker
+docker run -d -p 6379:6379 redis:alpine
+
+# Or using local Redis installation
+redis-server
+```
+
+### 4. Run the Application
+
+```bash
+# Development mode (with file watching)
+npm run dev
+
+# Production mode
 npm start
 ```
 
-The server will start on `http://localhost:3000`
+The API will be available at `http://localhost:3000`
 
-## API Endpoints
+## 📚 API Documentation
+
+### Interactive Documentation
+Visit `http://localhost:3000/docs` for Swagger UI documentation.
 
 ### Base URL
 ```
 http://localhost:3000
 ```
 
-### Available Endpoints
+### Endpoints
 
-#### 1. Movies Per Actor
-```http
-GET /api/moviesPerActor
-```
-Returns a list of Marvel movies each actor has appeared in.
-
-**Response:**
-```json
-{
-  "Robert Downey Jr.": ["Iron Man", "Iron Man 2", "The Avengers"],
-  "Chris Evans": ["Captain America: The First Avenger", "The Avengers"]
-}
-```
-
-#### 2. Actors with Multiple Characters
-```http
-GET /api/actorsWithMultipleCharacters
-```
-Returns actors who have played more than one Marvel character.
-
-**Response:**
-```json
-{
-  "Chris Evans": [
-    {"movieName": "Fantastic Four (2005)", "characterName": "Johnny Storm"},
-    {"movieName": "Captain America: The First Avenger", "characterName": "Steve Rogers"}
-  ]
-}
-```
-
-#### 3. Characters with Multiple Actors
-```http
-GET /api/charactersWithMultipleActors
-```
-Returns characters that have been played by more than one actor.
-
-**Response:**
-```json
-{
-  "Bruce Banner": [
-    {"movieName": "The Incredible Hulk", "actorName": "Edward Norton"},
-    {"movieName": "The Avengers", "actorName": "Mark Ruffalo"}
-  ]
-}
-```
-
-#### 4. Clear Cache
-```http
-POST /api/cache/clear
-```
-Clears all cached data.
-
-**Response:**
-```json
-{
-  "message": "Cache cleared successfully"
-}
-```
-
-#### 5. Health Check
+#### Health Check
 ```http
 GET /health
 ```
-Returns API health status.
 
 **Response:**
 ```json
 {
   "status": "healthy",
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "environment": "development"
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "environment": "development",
+  "services": {
+    "redis": "connected",
+    "cache": "enabled"
+  }
 }
 ```
 
-## API Documentation
+#### Root Information
+```http
+GET /
+```
+
+**Response:**
+```json
+{
+  "message": "Movies API",
+  "documentation": "/docs",
+  "endpoints": {
+    "moviesPerActor": "/moviesPerActor",
+    "actorsWithMultipleCharacters": "/actorsWithMultipleCharacters",
+    "charactersWithMultipleActors": "/charactersWithMultipleActors"
+  }
+}
+```
+
+#### Movies Per Actor
+```http
+GET /moviesPerActor
+```
+
+Returns all movies each actor has appeared in.
+
+**Response:**
+```json
+{
+  "Robert Downey Jr.": [
+    "Iron Man",
+    "Iron Man 2", 
+    "The Avengers",
+    "Iron Man 3"
+  ],
+  "Chris Evans": [
+    "Captain America: The First Avenger",
+    "The Avengers",
+    "Captain America: The Winter Soldier"
+  ]
+}
+```
+
+#### Actors with Multiple Characters
+```http
+GET /actorsWithMultipleCharacters
+```
+
+Returns actors who have played more than one character.
+
+**Response:**
+```json
+{
+  "Actor Name": [
+    "Character 1",
+    "Character 2"
+  ]
+}
+```
+
+#### Characters with Multiple Actors
+```http
+GET /charactersWithMultipleActors
+```
+
+Returns characters that have been played by different actors.
+
+**Response:**
+```json
+{
+  "Character Name": [
+    "Actor 1",
+    "Actor 2"
+  ]
+}
+```
+
+#### Clear Cache (Development)
+```http
+POST /clearCache
+```
+
+Clears the Redis cache.
+
+**Response:**
+```json
+{
+  "message": "Cache cleared successfully",
+  "deletedKeys": 42
+}
+```
+
+## 📚 API Documentation
 
 Interactive Swagger documentation is available at:
 ```
-http://localhost:3000/api-docs
+http://localhost:3000/docs
 ```
 
-## Testing
+## 🧪 Testing
 
 ### Run All Tests
 ```bash
@@ -185,119 +232,143 @@ npm run test:coverage
 npm run test:watch
 ```
 
-## Project Structure
-
+### Test Structure
 ```
-├── src/
-│   ├── index.js              # Main server file
-│   ├── routes/
-│   │   └── marvelRoutes.js   # API routes
-│   ├── services/
-│   │   ├── marvelService.js  # Business logic
-│   │   └── tmdbService.js    # TMDB API client
-│   └── utils/
-│       ├── config.js         # Configuration management
-│       ├── logger.js         # Logging utility
-│       ├── redisCache.js     # Redis caching utility
-│       └── swagger.js        # Swagger documentation setup
-├── tests/
-│   ├── unit/                 # Unit tests
-│   └── integration/          # Integration tests
-├── dataForQuestions.js       # Marvel movies and actors data
-├── .env                      # Environment variables
-├── package.json              # Dependencies and scripts
-└── README.md                 # This file
+tests/
+├── unit/                 # Unit tests
+│   ├── movies.test.js
+│   ├── moviesService.test.js
+│   ├── redisCache.test.js
+│   └── tmdbService.test.js
+└── integration/          # Integration tests
+    └── app.integration.test.js
 ```
 
-## Technologies Used
+## 🏗 Project Structure
 
-- **Express.js**: Web framework
-- **Lodash**: Utility library for data manipulation
-- **Redis**: In-memory caching
-- **Swagger**: API documentation
-- **Winston**: Logging
-- **Jest**: Testing framework
-- **Axios**: HTTP client for TMDB API
+```
+src/
+├── index.js              # Application entry point
+├── routes/
+│   └── appRoutes.js      # API route definitions
+├── services/
+│   └── moviesService.js  # Business logic
+├── clients/
+│   └── tmdbService.js    # TMDB API client
+├── infrastructure/
+│   └── redis.js          # Redis cache implementation
+└── utils/
+    ├── config.js         # Configuration management
+    ├── logger.js         # Winston logger setup
+    ├── swagger.js        # Swagger documentation
+    ├── constants.js      # Application constants
+    └── movies.js         # Movie utility functions
+```
 
-## Architecture Features
+## ⚙️ Configuration
+
+The application uses environment variables for configuration. All settings are centralized in `src/utils/config.js`.
+
+### Required Environment Variables
+- `TMDB_API_KEY` - Your TMDB API key
+- `REDIS_URL` - Redis connection URL
+
+### Optional Environment Variables
+- `PORT` - Server port (default: 3000)
+- `NODE_ENV` - Environment (default: development)
+- `CACHE_TTL_SECONDS` - Cache expiration time (default: 3600)
+- `LOG_LEVEL` - Logging level (default: info)
+
+## 🔧 Development
+
+### Available Scripts
+- `npm start` - Start production server
+- `npm run dev` - Start development server with file watching
+- `npm test` - Run tests
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Run tests with coverage report
+
+### Logging
+The application uses Winston for structured logging. Logs include:
+- Request/response information
+- Error details with stack traces
+- Performance metrics
+- Cache hit/miss statistics
 
 ### Caching Strategy
-- **Generic Redis cache** - Reusable for any application
-- **Namespaced caching** - Organized by `namespace:id` pattern
-- **Bulk operations** - Efficient batch get/set operations
-- **Pattern-based cleanup** - Selective cache invalidation
-- **Configurable TTL** - Time To Live for all cached data
-- **Graceful fallback** - Continues without Redis when unavailable
+- Redis is used for caching TMDB API responses
+- Cache TTL is configurable via environment variables
+- Cache keys are namespaced for easy management
+- Automatic cache invalidation for testing
 
-### Error Handling
-- Comprehensive error logging
-- Graceful degradation when services are unavailable
-- Proper HTTP status codes
-- Structured error responses
+## 🚨 Error Handling
 
-### Performance Optimization
-- Parallel API calls to TMDB
-- Efficient data processing with Lodash
-- Memory-efficient data structures
-- Request-level caching
+The API implements comprehensive error handling:
+- Validation of required environment variables
+- TMDB API error handling with retries
+- Redis connection error handling
+- Structured error responses with appropriate HTTP status codes
 
-### Scalability
-- Modular service architecture with clean separation of concerns
-- Configurable timeouts and retry logic
-- Environment-based configuration
-- Stateless design for horizontal scaling
-- Singleton Redis connection for resource efficiency
+## 📝 API Usage Examples
 
-## Environment Variables
+### Using cURL
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `3000` |
-| `NODE_ENV` | Environment | `development` |
-| `TMDB_API_KEY` | TMDB API key | Required |
-| `TMDB_BASE_URL` | TMDB API base URL | `https://api.themoviedb.org/3` |
-| `REDIS_URL` | Redis connection URL | `redis://localhost:6379` |
-| `CACHE_TTL_SECONDS` | Cache TTL in seconds | `3600` |
-| `CACHE_ENABLED` | Enable/disable caching | `true` |
-| `LOG_LEVEL` | Logging level | `info` |
+```bash
+# Health check
+curl http://localhost:3000/health
 
-## Development
+# Get movies per actor
+curl http://localhost:3000/moviesPerActor
 
-### Code Style
-- ES6+ modules
-- Async/await for asynchronous operations
-- Comprehensive error handling
-- Structured logging
-- Clean service architecture with dependency injection
+# Get actors with multiple characters
+curl http://localhost:3000/actorsWithMultipleCharacters
 
-### Testing
-- Unit tests for individual components
-- Integration tests for API endpoints
-- Data validation tests
-- Mocking for external dependencies
+# Get characters with multiple actors
+curl http://localhost:3000/charactersWithMultipleActors
 
-## Production Considerations
+# Clear cache
+curl -X POST http://localhost:3000/clearCache
+```
 
-1. **Redis Setup**: Use a production Redis instance with persistence
-2. **Environment Variables**: Set appropriate values for production
-3. **Logging**: Configure file logging for production
-4. **Monitoring**: Add health checks and monitoring
-5. **Rate Limiting**: Consider API rate limiting for production use
-6. **HTTPS**: Use HTTPS in production
-7. **Process Management**: Use PM2 or similar for process management
+### Using JavaScript/Fetch
 
-## Contributing
+```javascript
+// Get movies per actor
+const response = await fetch('http://localhost:3000/moviesPerActor');
+const moviesPerActor = await response.json();
+console.log(moviesPerActor);
+
+// Clear cache
+const clearResponse = await fetch('http://localhost:3000/clearCache', {
+  method: 'POST'
+});
+const result = await clearResponse.json();
+console.log(result);
+```
+
+## 🔐 Security Features
+
+- CORS enabled
+- Security headers implemented
+- Input validation
+- Environment variable validation
+- No sensitive data in logs
+
+## 📊 Performance
+
+- Redis caching for fast response times
+- TMDB API rate limiting compliance
+- Batch processing for multiple API calls
+- Connection pooling for Redis
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Write tests for new functionality
+3. Write tests for your changes
 4. Ensure all tests pass
 5. Submit a pull request
 
-## License
+## 📄 License
 
-This project is licensed under the ISC License.
-
-## Support
-
-For questions or issues, please contact the development team or create an issue in the repository.
+ISC License

@@ -3,7 +3,7 @@ import _ from "lodash";
 import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 import { RedisCache } from "../infrastructure/redis.js";
-import { CACHE_NAMESPACES, TMDB_CONFIG } from "../utils/constants.js";
+import { CACHE_NAMESPACES } from "../utils/constants.js";
 import { movies } from "../../dataForQuestions.js";
 
 /**
@@ -93,7 +93,7 @@ export class TMDBService {
     try {
       const movieIds = _.values(movies);
       const movieIdToName = _.invert(movies);
-      const batchSize = TMDB_CONFIG.BATCH_SIZE;
+      const batchSize = config.tmdb.batchSize;
       const results = [];
 
       logger.info(
@@ -111,7 +111,7 @@ export class TMDBService {
           logger.debug(`Batch completed, applying rate limit delay`, {
             batchSize: batch.length,
           });
-          await this.delayExecution(TMDB_CONFIG.BATCH_DELAY_MS);
+          await this.delayExecution(config.tmdb.batchDelayMs);
         }
       }
 

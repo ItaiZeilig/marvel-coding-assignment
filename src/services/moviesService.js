@@ -7,6 +7,7 @@ import {
   findActorMatch,
   hasMultipleDistinctCharacters,
   normalizeCharacterForGrouping,
+  cleanCharacterString,
 } from "../utils/movies.js";
 import { CACHE_NAMESPACES, CACHE_KEYS } from "../utils/constants.js";
 import { actors } from "../../dataForQuestions.js";
@@ -148,7 +149,7 @@ export class MoviesService {
         .mapValues((characters) =>
           _.sortBy(characters, "movieName").map((char) => ({
             movieName: char.movieName,
-            characterName: char.characterName,
+            characterName: cleanCharacterString(char.characterName),
           }))
         )
         .value();
@@ -179,6 +180,39 @@ export class MoviesService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Initialize cache with all movie data if not already cached
+   * @returns {Promise<void>}
+   */
+  async initializeCache() {
+    logger.info("Initializing movie data cache...");
+    
+    const cacheKeys = [
+      CACHE_KEYS.MOVIES_PER_ACTOR,
+      CACHE_KEYS.ACTORS_WITH_MULTIPLE_CHARACTERS,
+      CACHE_KEYS.CHARACTERS_WITH_MULTIPLE_ACTORS
+    ];
+
+    for (const cacheKey of cacheKeys) {
+      const cachedData = await this.redis.getNamespaced(CACHE_NAMESPACES.MOVIES, cacheKey);
+      if (!cachedData) {
+        logger.info(`Cache miss for ${cacheKey}, fetching data...`);
+        
+        if (cacheKey === CACHE_KEYS.MOVIES_PER_ACTOR) {
+          await this.getMoviesPerActor();
+        } else if (cacheKey === CACHE_KEYS.ACTORS_WITH_MULTIPLE_CHARACTERS) {
+          await this.getActorsWithMultipleCharacters();
+        } else if (cacheKey === CACHE_KEYS.CHARACTERS_WITH_MULTIPLE_ACTORS) {
+          await this.getCharactersWithMultipleActors();
+        }
+      } else {
+        logger.info(`Cache hit for ${cacheKey}`);
+      }
+    }
+    
+    logger.info("Movie data cache initialization completed");
   }
 
   /**
@@ -215,7 +249,7 @@ export class MoviesService {
 
             if (!characterActors[normalizedCharacter]) {
               characterActors[normalizedCharacter] = [];
-              normalizedToOriginal[normalizedCharacter] = castMember.character;
+              normalizedToOriginal[normalizedCharacter] = cleanCharacterString(castMember.character);
             }
 
             characterActors[normalizedCharacter].push({

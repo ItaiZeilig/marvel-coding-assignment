@@ -20,11 +20,14 @@ const config = {
     apiKey: process.env.TMDB_API_KEY,
     baseUrl: process.env.TMDB_BASE_URL || "https://api.themoviedb.org/3",
     timeout: parseInt(process.env.TMDB_TIMEOUT_MS) || 500,
+    batchSize: 20, // Safe concurrent batch size (well under 50 req/sec limit)
+    batchDelayMs: 250, // Delay between batches to stay well under rate limit
+    rateLimitPerSecond: 50, // TMDB API rate limit
   },
 
   // Redis Configuration
   redis: {
-    url: process.env.REDIS_URL || "redis://localhost:6379",
+    url: process.env.REDIS_URL,
   },
 
   // Cache Configuration
@@ -48,6 +51,7 @@ const config = {
 function validateRequiredConfig() {
   const requiredFields = [
     { field: "tmdb.apiKey", value: config.tmdb.apiKey, name: "TMDB_API_KEY" },
+    { field: "redis.url", value: config.redis.url, name: "REDIS_URL" },
   ];
 
   const missingFields = _.filter(requiredFields, ({ value }) =>

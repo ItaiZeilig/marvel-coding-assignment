@@ -4,7 +4,6 @@ import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 import { RedisCache } from "../infrastructure/redis.js";
 import { MoviesService } from "../services/moviesService.js";
-import { HTTP_STATUS, MESSAGES } from "../utils/constants.js";
 
 const router = express.Router();
 
@@ -39,7 +38,7 @@ router.get("/health", (req, res) => {
 router.get("/", (req, res) => {
   res.json({
     message: "Movies API",
-    documentation: `/api-docs`,
+    documentation: `/docs`,
     endpoints: {
       moviesPerActor: "/moviesPerActor",
       actorsWithMultipleCharacters: "/actorsWithMultipleCharacters",
@@ -93,8 +92,8 @@ router.get("/moviesPerActor", async (req, res) => {
     const result = await moviesService.getMoviesPerActor();
 
     if (_.isEmpty(result)) {
-      logger.warn(MESSAGES.NO_MOVIES_PER_ACTOR);
-      return res.status(404).json({ msg: MESSAGES.NO_MOVIES_PER_ACTOR });
+      logger.warn("No movies per actor data found");
+      return res.status(404).json({ msg: "No movies per actor data found" });
     }
 
     res.json(result);

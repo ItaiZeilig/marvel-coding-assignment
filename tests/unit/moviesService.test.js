@@ -5,12 +5,14 @@ const mockFilterRelevantActors = jest.fn();
 const mockFindActorMatch = jest.fn();
 const mockHasMultipleDistinctCharacters = jest.fn();
 const mockNormalizeCharacterForGrouping = jest.fn();
+const mockCleanCharacterString = jest.fn();
 
 jest.unstable_mockModule("../../src/utils/movies.js", () => ({
   filterRelevantActors: mockFilterRelevantActors,
   findActorMatch: mockFindActorMatch,
   hasMultipleDistinctCharacters: mockHasMultipleDistinctCharacters,
   normalizeCharacterForGrouping: mockNormalizeCharacterForGrouping,
+  cleanCharacterString: mockCleanCharacterString,
 }));
 
 // Mock TMDB Service
@@ -73,6 +75,7 @@ describe("MoviesService", () => {
     mockFindActorMatch.mockReturnValue("Robert Downey Jr.");
     mockHasMultipleDistinctCharacters.mockReturnValue(true);
     mockNormalizeCharacterForGrouping.mockImplementation((char) => char.toLowerCase());
+    mockCleanCharacterString.mockImplementation((str) => str);
   });
 
   describe("singleton pattern", () => {

@@ -22,6 +22,20 @@ export const normalizeActorName = (name) => {
 };
 
 /**
+ * Clean character string by removing parenthetical notes and impersonation patterns
+ * @param {string} str - Character string to clean
+ * @returns {string} Cleaned character string
+ */
+export const cleanCharacterString = (str) => {
+  if (!str) return "";
+  
+  return str
+    .replace(/\(.*?\)/g, "") // Remove (uncredited), (voice), etc.
+    .replace(/as\s.*$/i, "") // Remove "as Captain America" patterns
+    .trim();
+};
+
+/**
  * Normalize character name for comparison
  * @param {string} name - Character name to normalize  
  * @returns {string} Normalized name
@@ -81,7 +95,9 @@ export const findActorMatch = (castMember, relevantActors) => {
 export const parseCharacterNames = (characterString) => {
   if (!characterString) return [];
   
-  return _.chain(characterString)
+  const cleaned = cleanCharacterString(characterString);
+  
+  return _.chain(cleaned)
     .split('/')
     .map(name => _.trim(name))
     .filter(name => !_.isEmpty(name))
@@ -129,6 +145,5 @@ export const hasMultipleDistinctCharacters = (characterStrings) => {
  * @returns {string} Normalized character for grouping
  */
 export const normalizeCharacterForGrouping = (characterString) => {
-  const primaryName = extractPrimaryCharacterName(characterString);
-  return normalizeCharacterName(primaryName);
+  return normalizeCharacterName(extractPrimaryCharacterName(characterString));
 };

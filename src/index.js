@@ -6,6 +6,7 @@ import appRoutes from "./routes/appRoutes.js";
 import logger from "./utils/logger.js";
 import { RedisCache } from "./infrastructure/redis.js";
 import { specs } from "./utils/swagger.js";
+import { MoviesService } from "./services/moviesService.js";
 
 const app = express();
 
@@ -28,7 +29,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/", appRoutes);
-app.use("/api-docs", swaggerUI.serve, swaggerUI.setup(specs));
+app.use("/docs", swaggerUI.serve, swaggerUI.setup(specs));
 
 const startApplicationServer = async () => {
   try {
@@ -36,10 +37,13 @@ const startApplicationServer = async () => {
     await redisClient.connect();
     logger.info("Database connection initialized");
 
+    const moviesService = MoviesService.getInstance();
+    await moviesService.initializeCache();
+
     const serverPort = process.env.PORT || 3000;
     app.listen(serverPort, () => {
       logger.info(`Application listening on port ${serverPort}`);
-      logger.info(`Swagger documentation endpoint: /api-docs`);
+      logger.info(`Swagger documentation endpoint: /docs`);
     });
   } catch (error) {
     logger.error("Failed to initialize server:", error);
