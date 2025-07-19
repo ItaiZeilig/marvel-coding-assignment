@@ -245,11 +245,6 @@ describe("RedisCache", () => {
       // Don't set client to null, keep the mock
     });
 
-    it.skip("should establish connection successfully", async () => {
-      // Skipping this test due to mocking complexity with Redis client
-      // The connection logic is tested in integration tests
-    });
-
     it("should skip connection if already connected", async () => {
       redisCache.client = mockRedisClient;
       redisCache.isConnected = true;
@@ -257,11 +252,6 @@ describe("RedisCache", () => {
       await redisCache.connect();
 
       expect(mockRedisClient.connect).not.toHaveBeenCalled();
-    });
-
-    it.skip("should handle connection errors", async () => {
-      // Skipping this test due to mocking complexity with Redis client
-      // The error handling logic is tested in integration tests
     });
   });
 
